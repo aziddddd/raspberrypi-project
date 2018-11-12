@@ -15,6 +15,14 @@ def updatePlot( i ):
     # Readout temperature sensor
     temp_water, temp_peltier = tmp0.getCelsius(), tmp1.getCelsius()
 
+    if (GPIO.input(switch) == GPIO.HIGH):
+        print('Peltier Temperature in centigrade    :   {}'.format(temp_peltier))
+        if temp_peltier < measurements_peltier[-1]:
+            print('Peltier status                   :   Cooling')
+        elif temp_peltier >= measurements_peltier[-1]:
+            print('Peltier status                   :   Not Cooling')
+        return
+
     # Hysteresis loop for temperature measurement
     if temp_water < (temp_set - temp_hys):
         GPIO.output(peltier, GPIO.OUT)
@@ -47,13 +55,10 @@ def main():
     # GPIO programming by BCM pin numbers
     GPIO.setmode(GPIO.BCM) 
 
-    # Prompt required data for refrigeration
-    frequency   = float(input('Input the frequency of cooling power variation in Hz : '))
-    duty_cycle  = float(input('Input the duty cycle [ 0-100 ] : '))
-    temp_set    = float(input('Input the fridge temperature, Tf in centigrade : '))
-    temp_hys    = float(input('Input the hysteresis value, Th in centigrade : '))
+    # Declare the pins
     peltier     = 21            # Your peltier pin
     fan         = 20            # Your fan pin
+    switch      = 19            # Your switch pin
 
     # Verify duty cycle
     if duty_cycle < 0 or duty_cycle > 100:
@@ -63,9 +68,11 @@ def main():
     # Initialises the pin as output
     GPIO.setup(peltier, GPIO.OUT)
     GPIO.setup(fan, GPIO.OUT)
+    GPIO.setup(switch, GPIO.OUT)
 
     # Set the output
     GPIO.output(fan, GPIO.HIGH)
+    GPIO.output(switch, GPIO.HIGH)
     cool = GPIO.PWM(peltier, frequency)
     cool.start(0)
 
@@ -77,12 +84,21 @@ def main():
     # Set up the plot object
     plotFigure = pylab.figure()
 
-    # Make the animated plot
-    ani = animation.FuncAnimation( plotFigure, updatePlot, interval=1000 )
-    pylab.xlabel('Real time in seconds')
-    pylab.ylabel('Temperature in centigrade')
-    pylab.title('Temperature Sensor')
-    pylab.legend()
-    pylab.show()
+    # Loop forever
+    while True:
+        if (GPIO.input(switch) == GPIO.LOW):
+            # Prompt required data for refrigeration
+            frequency   = float(input('Input the frequency of cooling power variation in Hz : '))
+            duty_cycle  = float(input('Input the duty cycle [ 0-100 ] : '))
+            temp_set    = float(input('Input the fridge temperature, Tf in centigrade : '))
+            temp_hys    = float(input('Input the hysteresis value, Th in centigrade : '))
+
+            # Make the animated plot
+            ani = animation.FuncAnimation( plotFigure, updatePlot, interval=1000 )
+            pylab.xlabel('Real time in seconds')
+            pylab.ylabel('Temperature in centigrade')
+            pylab.title('Temperature Sensor')
+            pylab.legend()
+            pylab.show()
 
 main()
